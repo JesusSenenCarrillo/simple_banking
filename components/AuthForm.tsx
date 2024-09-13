@@ -1,23 +1,25 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
+import { signIn, signUp } from "@/lib/actions/user.actions";
 import { authFormSchema } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import FormInput from "./FormInput";
 
 const AuthForm = ({ type }: { type: string }) => {
+    const router = useRouter();
     const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
 
     const formSchema = authFormSchema(type);
 
-    // 1. Define your form.
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         mode: "onChange",
@@ -27,14 +29,27 @@ const AuthForm = ({ type }: { type: string }) => {
         },
     });
 
-    // 2. Define a submit handler.
-    function onSubmit(values: z.infer<typeof formSchema>) {
-        // Do something with the form values.
-        // ✅ This will be type-safe and validated.
+    const onSubmit = async (data: z.infer<typeof formSchema>) => {
         setIsLoading(true);
-        console.log(values);
-        setIsLoading(false);
-    }
+        try {
+            if (type === "sign-up") {
+                const newUser = await signUp(data);
+                setUser(newUser);
+            } else if (type === "sign-in") {
+                const response = await signIn({
+                    email: data.email,
+                    password: data.password,
+                });
+                if (response) router.push("/");
+            }
+            console.log(data);
+            setIsLoading(false);
+        } catch (error) {
+            console.log(error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
         <section className="auth-form">
@@ -99,6 +114,12 @@ const AuthForm = ({ type }: { type: string }) => {
                                         name="address1"
                                         placeholder="Enter your address"
                                         label="Address"
+                                    />
+                                    <FormInput
+                                        control={form.control}
+                                        name="city"
+                                        placeholder="Enter your city"
+                                        label="City"
                                     />
                                     <div className="flex gap-4">
                                         <FormInput
